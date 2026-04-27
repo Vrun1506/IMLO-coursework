@@ -22,7 +22,9 @@ training_dataset_full = datasets.OxfordIIITPet(root = "./data",
         target_types = "category",
         download = True, 
         transform = transforms.Compose([
-            transforms.Resize((224, 224)), 
+            transforms.Resize((224, 224)),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomRotation(10),
             transforms.ToTensor()]))
 
 validation_dataset_full = datasets.OxfordIIITPet(root = "./data", 
@@ -34,8 +36,11 @@ validation_dataset_full = datasets.OxfordIIITPet(root = "./data",
             transforms.ToTensor()]))
 
 
-training_dataset, not_training = random_split(training_dataset_full, [int(0.8*len(training_dataset_full)), int(0.2*len(training_dataset_full))])
-not_validation, validation_dataset = random_split(validation_dataset_full, [int(0.8*len(validation_dataset_full)), int(0.2*len(validation_dataset_full))])
+training_images_num = int(0.8 * len(training_dataset_full))
+validation_images_num = int(0.2 * len(training_dataset_full))
+
+training_dataset, not_training = random_split(training_dataset_full, [training_images_num, validation_images_num])
+not_validation, validation_dataset = random_split(validation_dataset_full, [training_images_num, validation_images_num])
 
 # print(len(training_dataset))
 
@@ -53,7 +58,10 @@ validation_dataloader = DataLoader(validation_dataset, batch_size=32, shuffle = 
 
 print("Size of training dataset: "+str(len(training_dataset)))
 print("Size of validation dataset: "+str(len(validation_dataset)))
-# Need to find a way to increase the number of images available to us for training because we don't have enough currently. 
+
+# Need to find a way to increase the number of images available to us for training because we need to prevent overfitting. 
+# Ways of slightly modifying the images: rotating the image and doing flips. 
+
 
 
 
