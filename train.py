@@ -1,5 +1,8 @@
 from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
+import matplotlib.pyplot as plt
+
+
 
 # Images are coming in different sizes so need to figure out how to resize them to a common size so the model can process them more easily. 
 # Need to be mindful of data loss when doing this though. 
@@ -10,7 +13,11 @@ from torch.utils.data import DataLoader
 # toTensor() converts the pixel into a multi-deminsional array of numbers between 0 and 1 (kinda like a one-hot encoding). 
 # The model now has the numerical data it needs to learn from and now we can start training the model (no idea how to do this yet).
 
-training_dataset = datasets.OxfordIIITPet(root = "./data", 
+training_losses = []
+validation_losses = []
+
+
+training_dataset_full = datasets.OxfordIIITPet(root = "./data", 
         split = "trainval", 
         target_types = "category",
         download = True, 
@@ -18,24 +25,36 @@ training_dataset = datasets.OxfordIIITPet(root = "./data",
             transforms.Resize((224, 224)), 
             transforms.ToTensor()]))
 
-print(len(training_dataset))
+validation_dataset_full = datasets.OxfordIIITPet(root = "./data", 
+        split = "trainval", 
+        target_types = "category",
+        download = True, 
+        transform = transforms.Compose([
+            transforms.Resize((224, 224)), 
+            transforms.ToTensor()]))
 
-first_image = training_dataset[0][0]
-print(first_image)
 
-print(first_image.size)
+training_dataset, not_training = random_split(training_dataset_full, [int(0.8*len(training_dataset_full)), int(0.2*len(training_dataset_full))])
+not_validation, validation_dataset = random_split(validation_dataset_full, [int(0.8*len(validation_dataset_full)), int(0.2*len(validation_dataset_full))])
 
-image_label = training_dataset[0][1]
-print(image_label)
+# print(len(training_dataset))
 
+# first_image = training_dataset[0][0]
+# print(first_image)
+
+# print(first_image.size)
+
+# image_label = training_dataset[0][1]
+# print(image_label)
+
+# Set batch size to 32. If we wanna speed up training, increase to 64 per the documentation recommendations. 
 training_dataloader = DataLoader(training_dataset, batch_size = 32, shuffle = True)
+validation_dataloader = DataLoader(validation_dataset, batch_size=32, shuffle = False) # Not particularly interested in the order so shuffle is False.
 
-# Batch size is the number of images that will be passed to the model at a time. Docs suggest using 64, but I've gone slightly lower to improve accuracy.
-# Use shuffle to avoid data bias by random shuffles at the start of each epoch to ensure that the model doesn't learn anything about the order of the images. 
-
-
+print("Size of training dataset: "+str(len(training_dataset)))
+print("Size of validation dataset: "+str(len(validation_dataset)))
 # Need to find a way to increase the number of images available to us for training because we don't have enough currently. 
-# Check email to wait for response from lecturer about manipulation with transforms. 
+
 
 
 # Add loss function
@@ -44,5 +63,10 @@ training_dataloader = DataLoader(training_dataset, batch_size = 32, shuffle = Tr
 # Add optimiser
 
 # Coursework paper says to split the dataset into training and validation sets as an option. 
-# Number of images is greatly diluted already per the different classes, so I think I'll just keep the test set for validating. 
-# Could be interesting to see if it makes a difference if I do the 80:20 split for training and validation (with hyperparam modification to optimise) and then the test set for actually testing the model. 
+
+
+# Checking if we are overfitting or not
+# plt.plot(training_losses, label = "Training Loss")
+# plt.plot(validation_losses, label = "Validation Loss")
+# plt.legend()
+# plt.show()
