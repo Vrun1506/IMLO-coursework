@@ -1,6 +1,8 @@
-from torchvision import datasets, transforms
+from torchvision import datasets
+from torchvision.transforms import v2
 from torch.utils.data import DataLoader, random_split
 import matplotlib.pyplot as plt
+import torch
 
 
 
@@ -21,19 +23,21 @@ training_dataset_full = datasets.OxfordIIITPet(root = "./data",
         split = "trainval", 
         target_types = "category",
         download = True, 
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomRotation(10),
-            transforms.ToTensor()]))
+        transform = v2.Compose([
+            v2.Resize((224, 224)),
+            v2.RandomHorizontalFlip(),
+            v2.RandomRotation(10),
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True)]))
 
 validation_dataset_full = datasets.OxfordIIITPet(root = "./data", 
         split = "trainval", 
         target_types = "category",
         download = True, 
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)), 
-            transforms.ToTensor()]))
+        transform = v2.Compose([
+            v2.Resize((224, 224)), 
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True)]))
 
 
 training_images_num = int(0.8 * len(training_dataset_full))

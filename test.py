@@ -1,13 +1,16 @@
-from torchvision import datasets, transforms
+from torchvision import datasets
+from torchvision.transforms import v2
 from torch.utils.data import DataLoader
+import torch
 
 test_dataset = datasets.OxfordIIITPet(root = "./data", 
         split = "test", 
         target_types = "category",
         download = True, 
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)), 
-            transforms.ToTensor()]))
+        transform = v2.Compose([
+            v2.Resize((224, 224)), 
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True)]))
 
 test_dataloader = DataLoader(test_dataset, batch_size = 32, shuffle = False)
 
