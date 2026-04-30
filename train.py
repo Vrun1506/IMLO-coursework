@@ -2,18 +2,8 @@ from torchvision import datasets
 from torchvision.transforms import v2
 from torch.utils.data import DataLoader, random_split
 import matplotlib.pyplot as plt
+import torch.nn as nn
 import torch
-
-
-
-# Images are coming in different sizes so need to figure out how to resize them to a common size so the model can process them more easily. 
-# Need to be mindful of data loss when doing this though. 
-
-# Did some research and found that 224x224 is the conventional size for image classification tasks. If it takes too long to train, reduce the image size so it speeds up. 
-
-# From the week 10 lecture, the model expects data to be in the form of signals. 
-# toTensor() converts the pixel into a multi-deminsional array of numbers between 0 and 1 (kinda like a one-hot encoding). 
-# The model now has the numerical data it needs to learn from and now we can start training the model (no idea how to do this yet).
 
 training_losses = []
 validation_losses = []
@@ -46,16 +36,6 @@ validation_images_num = int(0.2 * len(training_dataset_full))
 training_dataset, not_training = random_split(training_dataset_full, [training_images_num, validation_images_num])
 not_validation, validation_dataset = random_split(validation_dataset_full, [training_images_num, validation_images_num])
 
-# print(len(training_dataset))
-
-# first_image = training_dataset[0][0]
-# print(first_image)
-
-# print(first_image.size)
-
-# image_label = training_dataset[0][1]
-# print(image_label)
-
 # Set batch size to 32. If we wanna speed up training, increase to 64 per the documentation recommendations. 
 training_dataloader = DataLoader(training_dataset, batch_size = 32, shuffle = True)
 validation_dataloader = DataLoader(validation_dataset, batch_size=32, shuffle = False) # Not particularly interested in the order so shuffle is False.
@@ -63,18 +43,25 @@ validation_dataloader = DataLoader(validation_dataset, batch_size=32, shuffle = 
 print("Size of training dataset: "+str(len(training_dataset)))
 print("Size of validation dataset: "+str(len(validation_dataset)))
 
-# Need to find a way to increase the number of images available to us for training because we need to prevent overfitting. 
-# Ways of slightly modifying the images: rotating the image and doing flips. 
+class PetClassifier(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return x
 
 
+device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
+print(f"Using {device} device")
 
 
+pet_classifier = PetClassifier().to(device)
 # Add loss function
-
+nn_loss = nn.CrossEntropyLoss()
 
 # Add optimiser
-
-# Coursework paper says to split the dataset into training and validation sets as an option. 
+optimizer = torch.optim.Adam(pet_classifier.parameters(), lr=0.001)
+ 
 
 
 # Checking if we are overfitting or not
