@@ -3,6 +3,7 @@ from torchvision.transforms import v2
 from torch.utils.data import DataLoader, random_split
 import matplotlib.pyplot as plt
 import torch.nn as nn
+import torch.nn.functional as F
 import torch
 
 training_losses = []
@@ -37,6 +38,11 @@ raw_dataset = datasets.OxfordIIITPet(
 
 # print("Mean:"+str(mean))
 # print("Std:"+str(std))
+
+
+# I computed these values using the above code snippet, which I got from an online PyTorch forum. 
+mean = [0.4783, 0.4459, 0.3957]
+std = [0.2254, 0.2223, 0.2240]
 
 
 training_dataset_full = datasets.OxfordIIITPet(
@@ -82,8 +88,37 @@ print("Size of validation dataset: " + str(len(validation_dataset)))
 class PetClassifier(nn.Module):
     def __init__(self):
         super().__init__()
+        # The layers pass from layer to the next to the next so the out of one becomes the in of the next. 
+        # There are four layers and I'm doubling the number of filters so that it can identify more complex features as we move deeper into the architecture. 
+        # I chose a kernel size of three to represent the 3x3 filter that will be applied to the images. 
+        # From the guest lecture on the importance of standardisation and normalisation, I have applied batch normalisation after each convolutional layer.
+        # This is to ensure that the values don't get too high or too litttle
+        # After applying it through each filter, I'm applying max pooling to reduce spatial dimensions, which flattens the output.
+        # It's a 2x2 sliding window which essentially is taking the max val in the window, and sliding it across the image. 
+        
+
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1) 
+        self.bn1 = nn.BatchNorm2d(32)
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)
+        self.bn3 = nn.BatchNorm2d(128)
+        self.conv4 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1)
+        self.bn4 = nn.BatchNorm2d(256)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.fc1 = nn.Linear(256 * 14 * 14, 512) #14 represents the size of the grid after the pooling layers have hit. 256 is the number of filters in the final convolutional layer. 
+        # 512 hidden neurons to learn and identify complex patt
+        self.fc2 = nn.Linear(512, 37) # Second param matches no of sub-classes. 
+        self.dropout = nn.Dropout(p=0.5) # It randomly sets 50% of the input units to 0 at each update during training time, which helps prevent overfitting. I set it up in anticipation of overfitting as a precautionary measure. 
 
     def forward(self, x):
+        x = self.pool(F.relu(self.bn1(self.conv1(x)))) # 32 images get fed in as a batch (which is defined per our batch sizeWe initially start with three filters (RGB) and we apply conv, batch norm, relu activation, and max pooling to increase the number of filters 
+        x = self.pool(F.relu(self.bn2(self.conv2(x))))
+        x = self.pool(F.relu(self.bn3(self.conv3(x))))
+        x = self.pool(F.relu(self.bn4(self.conv4(x))))
+        x = torch.flatten(x, 1)
+        x = self.dropout(F.relu(self.fc1(x)))
+        x = self.fc2(x)
         return x
 
 device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
@@ -95,7 +130,7 @@ pet_classifier = PetClassifier().to(device)
 nn_loss = nn.CrossEntropyLoss()
 
 # Add optimiser
-# optimizer = torch.optim.Adam(pet_classifier.parameters(), lr=0.001)
+optimizer = torch.optim.Adam(pet_classifier.parameters(), lr=0.001)
 
 # Checking if we are overfitting or not
 # plt.plot(training_losses, label = "Training Loss")
