@@ -6,3 +6,6 @@ https://stackoverflow.com/questions/69471729/is-there-an-actual-minimum-input-im
 
 https://docs.pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html#
 
+https://medium.com/data-scientists-diary/stochastic-gradient-descent-sgd-and-adam-4fe496ef1bbf
+
+https://www.kaggle.com/discussions/getting-started/236883

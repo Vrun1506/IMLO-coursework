@@ -1,14 +1,24 @@
-Currently, we don't have access to that many images, so thinking of modifying the image dataset via the Pillow library (it is part of the environment.yml file so potential), or if there's any potential with PyTorch itself. 
-
 Need to plan out the layers for the neural network architecture and identifying the discernible features so we can work from there and figure out how to actually set up the neural network and the layers itself.
 
-Plan for overfitting just in case. Have a visualisation via matplotlib mapping training loss and validation loss. 
+Plan a four layer implementation approach based off the PyTorch docs.
 
-I can't use the test data as validation because I'm gonna overfit the model otherwise. 
+Start with a smaller filter like 3x3 and observe what happens with our accuracy. 
 
-I need to keep the test data clean and separate so that the model has never seen said test data before and I can use it to evaluate our model performance once I'm happy with the training data testing. 
+I'm going to start the convolutional layer at 32 filters and then increase it by doubling the number of filters in each convolutional layer going forwards to 64, 128, 256
 
-For this reason, I might have to split the trainval set into training and validation so I get an idea for how the model is performing and then only using the test data once we've established that we are happy with the model. 
+Going to use ReLU as the activation function to reset negatives to 0 after each convolutional layer. 
 
-In this situation, I'm definitely gonna need more images to validate the model and have a look at its accuracy. Still in the air about whether I should manipulate the images in the test dataset, or whether it's just good enough to do it for the training dataset. 
+Look into how to implement dropout and whether we need to change anything in our code to be able to implement it. 
+
+PyTorch docs uses SGD optimiser, but I'm going to use Adam for the interest of training time, and the fact that it adapts the learning rate better than SGD. 
+
+Guest lecture talked about batch normalisation and standardisation to minimise overfitting and accelerate model training.
+
+Need to work out how I'm going to work out the mean and standard deviation with tensor data because it's multi-dimensional, so I need to either get them all into a single tensor and then work it out, but there's way too many images for this to be viable. 
+
+See if there's a PyTorch function to work out the mean like there is in Pandas dataframes and iterate through the set to work out the average. 
+
+Look through forums as probs a common thing. 
+
+
 

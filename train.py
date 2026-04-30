@@ -17,6 +17,7 @@ training_dataset_full = datasets.OxfordIIITPet(root = "./data",
             v2.Resize((224, 224)),
             v2.RandomHorizontalFlip(),
             v2.RandomRotation(10),
+            v2.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
             v2.ToImage(),
             v2.ToDtype(torch.float32, scale=True)]))
 
@@ -56,11 +57,12 @@ print(f"Using {device} device")
 
 
 pet_classifier = PetClassifier().to(device)
+
 # Add loss function
 nn_loss = nn.CrossEntropyLoss()
 
 # Add optimiser
-optimizer = torch.optim.Adam(pet_classifier.parameters(), lr=0.001)
+# optimizer = torch.optim.Adam(pet_classifier.parameters(), lr=0.001)
  
 
 
