@@ -8,6 +8,8 @@ import torch
 
 training_losses = []
 validation_losses = []
+training_accuracies = []
+validation_accuracies = []
 
 
 raw_dataset = datasets.OxfordIIITPet(
@@ -130,8 +132,64 @@ pet_classifier = PetClassifier().to(device)
 nn_loss = nn.CrossEntropyLoss()
 
 # Add optimiser
-optimizer = torch.optim.Adam(pet_classifier.parameters(), lr=0.001)
+optimizer = torch.optim.Adam(pet_classifier.parameters(), lr=0.0001)
 
+epoch_limit = 30
+
+for epoch in range(epoch_limit):
+    pet_classifier.train()
+    running_train_loss = 0.0
+    correct_train = 0
+    total_train = 0
+    
+    for images, labels in training_dataloader:
+        images = images.to(device)
+        labels = labels.to(device)
+
+        optimizer.zero_grad()
+
+        outputs = pet_classifier(images)
+        loss = nn_loss(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        running_train_loss = running_train_loss + loss.item()
+        _, predicted = torch.max(outputs, dim=1)
+        total_train = total_train + labels.size(0)
+        correct_train = correct_train + (predicted == labels).sum().item()
+
+    epoch_train_loss = running_train_loss / len(training_dataloader)
+    epoch_train_accuracy = 100.0 * correct_train / total_train
+    training_losses.append(epoch_train_loss)
+    training_accuracies.append(epoch_train_accuracy)
+
+    pet_classifier.eval()
+    running_val_loss = 0.0
+    correct_val = 0
+    total_val = 0
+
+
+    with torch.no_grad():
+        for images, labels in validation_dataloader:
+            images = images.to(device)
+            labels = labels.to(device)
+            outputs = pet_classifier(images)
+            loss = nn_loss(outputs, labels)
+            running_val_loss = running_val_loss + loss.item()
+            _, predicted = torch.max(outputs, dim=1)
+            total_val = total_val + labels.size(0)
+            correct_val = correct_val + (predicted == labels).sum().item()
+
+    epoch_val_loss = running_val_loss / len(validation_dataloader)
+    epoch_val_accuracy = 100.0 * correct_val / total_val
+    validation_losses.append(epoch_val_loss)
+    validation_accuracies.append(epoch_val_accuracy)
+
+    print("\nEpoch "+str(epoch + 1)+"/"+str(epoch_limit)+" Summary:")
+    print("Training Loss: "+str(epoch_train_loss)+"%")
+    print("Training Accuracy: "+str(epoch_train_accuracy)+"%")
+    print("Validation Loss: "+str(epoch_val_loss)+"%")
+    print("Validation Accuracy: "+str(epoch_val_accuracy)+"%")
 # Checking if we are overfitting or not
 # plt.plot(training_losses, label = "Training Loss")
 # plt.plot(validation_losses, label = "Validation Loss")
