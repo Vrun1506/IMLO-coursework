@@ -1,4 +1,4 @@
-## Best performing version: 512 neurons and 0.3 dropout
+## Best performing version: 512 neurons and 0.2 dropout
 # Going to try and implement a ResNet architecture on top of this simple architecture to try and improve the accuracy. 
 # We skip the "vanishing gradient" problem by adding skip connections. 
 # Gonna look into how the DigitalOcean ResNet implementation works and then adapt it to this architecture and see if that makes a difference. 
@@ -7,7 +7,6 @@
 from torchvision import datasets
 from torchvision.transforms import v2
 from torch.utils.data import DataLoader, random_split
-import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
@@ -103,9 +102,9 @@ class PetClassifier(nn.Module):
         # After each conv block I apply max pooling to reduce spatial dimensions.
         # It's a 2x2 sliding window taking the max value in each window as it slides across the image.
 
-        self.conv1 = nn.Conv2d(in_channels=3,   out_channels=64,  kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=64,  kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm2d(64)
-        self.conv2 = nn.Conv2d(in_channels=64,  out_channels=128, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)
         self.bn2 = nn.BatchNorm2d(128)
         self.conv3 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1)
         self.bn3 = nn.BatchNorm2d(256)
@@ -115,7 +114,7 @@ class PetClassifier(nn.Module):
 
         self.fc1 = nn.Linear(512 * 14 * 14, 512) # 14 represents the spatial size after 4 rounds of 2x2 max pooling on a 224x224 image
         self.fc2 = nn.Linear(512, 37) # 37 pet breeds
-        self.dropout = nn.Dropout(p=0.3)
+        self.dropout = nn.Dropout(p=0.2)
 
     def forward(self, x):
         x = self.pool(F.relu(self.bn1(self.conv1(x))))
@@ -188,18 +187,11 @@ for epoch in range(epoch_limit):
     validation_losses.append(epoch_val_loss)
     validation_accuracies.append(epoch_val_accuracy)
 
-    # Update larning rate so that it decays more smoothly as we approach the end of training. 
     scheduler.step()
 
-    print("\nEpoch " +str(epoch + 1) + "/"+str(epoch_limit)+" Summary:")
+    print("\nEpoch "+str(epoch + 1) + "/"+str(epoch_limit)+" Summary:")
     print("Training Loss: "+str(epoch_train_loss)+"%")
-    print("Training Accuracy: "+ str(epoch_train_accuracy)+"%")
+    print("Training Accuracy: "+str(epoch_train_accuracy)+"%")
     print("Validation Loss: "+str(epoch_val_loss)+ "%")
     print("Validation Accuracy: "+str(epoch_val_accuracy)+ "%")
-    print("Learning Rate: "+ str(scheduler.get_last_lr()[0]))
-
-# Checking if we are overfitting or not
-# plt.plot(training_losses, label = "Training Loss")
-# plt.plot(validation_losses, label = "Validation Loss")
-# plt.legend()
-# plt.show()
+    print("Learning Rate: "+str(scheduler.get_last_lr()[0]))
