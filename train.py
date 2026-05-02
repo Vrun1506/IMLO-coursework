@@ -114,7 +114,7 @@ class PetClassifier(nn.Module):
 
         self.fc1 = nn.Linear(512 * 14 * 14, 512) # 14 represents the spatial size after 4 rounds of 2x2 max pooling on a 224x224 image
         self.fc2 = nn.Linear(512, 37) # 37 pet breeds
-        self.dropout = nn.Dropout(p=0.2)
+        self.dropout = nn.Dropout(p=0.1)
 
     def forward(self, x):
         x = self.pool(F.relu(self.bn1(self.conv1(x))))
@@ -139,9 +139,7 @@ optimiser = torch.optim.Adam(pet_classifier.parameters(), lr=0.0001)
 # Cosine annealing smoothly decays the learning rate
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimiser, T_max=30, eta_min=1e-5)
 
-epoch_limit = 30
-
-for epoch in range(epoch_limit):
+for epoch in range(30):
     pet_classifier.train()
     running_train_loss = 0.0
     correct_train = 0
@@ -189,7 +187,7 @@ for epoch in range(epoch_limit):
 
     scheduler.step()
 
-    print("\nEpoch "+str(epoch + 1) + "/"+str(epoch_limit)+" Summary:")
+    print("\nEpoch "+str(epoch + 1) + "/ 30 \n Summary:")
     print("Training Loss: "+str(epoch_train_loss)+"%")
     print("Training Accuracy: "+str(epoch_train_accuracy)+"%")
     print("Validation Loss: "+str(epoch_val_loss)+ "%")
