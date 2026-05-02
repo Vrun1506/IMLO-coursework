@@ -82,13 +82,13 @@ validation_dataset_full = datasets.OxfordIIITPet(
 training_images_num = int(0.8 * len(training_dataset_full))
 validation_images_num = int(0.2 * len(training_dataset_full))
 
-training_dataset, _ = random_split(training_dataset_full, [training_images_num, validation_images_num])
+training_dataset, _ = random_split(training_dataset_full, [training_images_num, validation_images_num]) # Opted for a 80:20 split, which I used in the past for a Computer Vision project at a hackathon, and it worked quite well. 
 _, validation_dataset = random_split(validation_dataset_full, [training_images_num, validation_images_num])
 
-training_dataloader = DataLoader(training_dataset, batch_size=64, shuffle=True)
+training_dataloader = DataLoader(training_dataset, batch_size=64, shuffle=True) # I upped the batch size from 32 and it improved the model accuracy significantly, most likely because each gradient update is averaged over more samples, so less noise
 validation_dataloader = DataLoader(validation_dataset, batch_size=64, shuffle=False)
 
-print("Size of training dataset: "+str(len(training_dataset)))
+print("Size of training dataset: "+str(len(training_dataset))) # Sanity check 
 print("Size of validation dataset: "+str(len(validation_dataset)))
 
 class PetClassifier(nn.Module):
@@ -103,38 +103,48 @@ class PetClassifier(nn.Module):
         # It's a 2x2 sliding window taking the max value in each window as it slides across the image.
 
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=64,  kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm2d(64)
+        self.bn1 = nn.BatchNorm2d(64) # Nromalise the output of conv layer each time to ensure value size stys within a reasoable range. 
         self.conv2 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)
         self.bn2 = nn.BatchNorm2d(128)
         self.conv3 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1)
         self.bn3 = nn.BatchNorm2d(256)
         self.conv4 = nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, padding=1)
         self.bn4 = nn.BatchNorm2d(512)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2) # 2x2 sliding window to essentially half the spatial dimensions and this happens four times total (one after each convolutional layer execution), which means we are basically dividing by 16, giving us 14 x 14. 
 
         self.fc1 = nn.Linear(512 * 14 * 14, 512) # 14 represents the spatial size after 4 rounds of 2x2 max pooling on a 224x224 image
         self.fc2 = nn.Linear(512, 37) # 37 pet breeds
-        self.dropout = nn.Dropout(p=0.1)
+        self.dropout = nn.Dropout(p=0.1) # Modifying this helps to prevent overfitting by setting certain inputs to 0 during training, and thus enforces robustness. Started at 0.5, moved to 0.3, 0.2 and then 0.1.
+
+        # The value still didn't overfit the model, and we observed a significant acc improv. 
 
     def forward(self, x):
-        x = self.pool(F.relu(self.bn1(self.conv1(x))))
+        x = self.pool(F.relu(self.bn1(self.conv1(x)))) # Applies all of teh stuff mentioned above. 
         x = self.pool(F.relu(self.bn2(self.conv2(x))))
         x = self.pool(F.relu(self.bn3(self.conv3(x))))
         x = self.pool(F.relu(self.bn4(self.conv4(x))))
-        x = torch.flatten(x, 1)
-        x = self.dropout(F.relu(self.fc1(x)))
+        x = torch.flatten(x, 1) # Flattens the tensor for the fully connected layer into a 1D vector. 
+        x = self.dropout(F.relu(self.fc1(x))) 
         x = self.fc2(x)
-        return x
+        return x # We get the scores for the 37 breeds as output, which we can then pass to the cross entropy loss function. 
 
-device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
+device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu" # MPS was genuinely really slow, so went with the T4 GPU, which trained the model much faster. 
 print(f"Using {device} device")
 
-pet_classifier = PetClassifier().to(device)
+pet_classifier = PetClassifier().to(device) # Move the nn to GPU. 
 
-nn_loss = nn.CrossEntropyLoss()
+nn_loss = nn.CrossEntropyLoss() # Loss calc
 
 # Tried to run it at 0.0002 but the validation accuracy and training accuracy was exploding all over the place lowkey. 
-optimiser = torch.optim.Adam(pet_classifier.parameters(), lr=0.0001)
+# optimiser = torch.optim.Adam(pet_classifier.parameters(), lr=0.0001)
+
+optimiser = torch.optim.AdamW(pet_classifier.parameters(), lr=0.0001, weight_decay=1e-4)
+# Better Adam according to research because better generalisation so operates better on unseen data. 
+# Kinda like with the objective function J in our lectures, the weight decay penalises the model for having large weights. 
+
+# Until I've established what the most optimal hyperparams are, I'm sticking with AdamW. 
+
+# Once architecture sorted, SWITCH TO SGD because it performs better once hyperparams are optimised because we aren't having to update the learning rate as much. 
 
 # Cosine annealing smoothly decays the learning rate
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimiser, T_max=30, eta_min=1e-5)
@@ -145,20 +155,22 @@ for epoch in range(30):
     correct_train = 0
     total_train = 0
     for images, labels in training_dataloader:
-        images = images.to(device)
+        images = images.to(device) # imgs + labels to GPU
         labels = labels.to(device)
         optimiser.zero_grad()
 
-        outputs = pet_classifier(images)
-        loss = nn_loss(outputs, labels)
-        loss.backward()
-        optimiser.step()
+        outputs = pet_classifier(images) # Predict the scores for each breed. 
+        loss = nn_loss(outputs, labels) # Compute loss for predictions and labels
+        
+        loss.backward() 
+        optimiser.step() # Weight update
 
-        running_train_loss += loss.item()
-        _, predicted = torch.max(outputs, dim=1)
+        running_train_loss += loss.item() # Total loss for epoch stats
+        _, predicted = torch.max(outputs, dim=1) # get the guess we are making based off the data
         total_train+= labels.size(0)
-        correct_train+= (predicted == labels).sum().item()
+        correct_train+= (predicted == labels).sum().item() # guss == lavel comparison to see behaviour in current epoch. 
 
+    # Stats calc
     epoch_train_loss = running_train_loss / len(training_dataloader)
     epoch_train_accuracy = 100.0 * correct_train / total_train
     training_losses.append(epoch_train_loss)
@@ -169,7 +181,9 @@ for epoch in range(30):
     correct_val = 0
     total_val = 0
 
-    with torch.no_grad():
+    with torch.no_grad(): # Stops the gradient update since we are evaluating the performance of our validation dataset. 
+        
+        # Pretty much the same process happens but this time with the training dataset. 
         for images, labels in validation_dataloader:
             images = images.to(device)
             labels = labels.to(device)
@@ -185,7 +199,7 @@ for epoch in range(30):
     validation_losses.append(epoch_val_loss)
     validation_accuracies.append(epoch_val_accuracy)
 
-    scheduler.step()
+    scheduler.step() # We update the learning rate as we go with each epoch, which will improve model performance as we go. 
 
     print("\nEpoch "+str(epoch + 1) + "/ 30 \n Summary:")
     print("Training Loss: "+str(epoch_train_loss)+"%")
